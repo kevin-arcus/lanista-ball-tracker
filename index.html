@@ -28,6 +28,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; scroll-padding-top: 72px; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; background: var(--ground); color: var(--ink); font: 17px/1.6 var(--body); -webkit-font-smoothing: antialiased; }
@@ -58,7 +59,8 @@ section > .wrap { display: grid; gap: 32px; }
 .head { display: grid; gap: 12px; max-width: 720px; }
 
 .hero { padding-block: 48px 64px; }
-.hero .wrap { display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; align-items: center; }
+.hero .wrap { display: grid; grid-template-columns: 0.9fr 1.25fr; gap: 40px; align-items: start; }
+.hero .copy { padding-top: 12px; }
 .hero .copy { display: grid; gap: 20px; min-width: 0; }
 .hero h1 span { color: var(--yellow-ink); }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -147,6 +149,53 @@ section > .wrap { display: grid; gap: 32px; }
 .next p { color: var(--ink-soft); font-size: 1rem; }
 footer { padding-block: 32px 48px; color: var(--ink-soft); font-size: 0.9rem; }
 
+/* the tool */
+.private { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); font-size: 0.98rem; }
+.private svg { width: 18px; height: 18px; color: var(--good); flex: none; }
+.toolcard { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: clamp(18px, 3vw, 28px); display: grid; gap: 18px; min-width: 0; box-shadow: 0 1px 0 var(--line), 0 18px 40px -24px rgba(0,0,0,0.35); }
+#setup { display: grid; gap: 18px; }
+.drop { border: 2px dashed var(--line); border-radius: 14px; padding: 28px 16px; display: grid; justify-items: center; gap: 12px; text-align: center; transition: border-color .15s, background .15s; }
+.drop.over { border-color: var(--yellow); background: color-mix(in srgb, var(--yellow) 10%, transparent); }
+.drop svg { width: 46px; height: 46px; color: var(--yellow-ink); }
+.hint { color: var(--ink-soft); font-size: 0.95rem; max-width: 26em; }
+.btn.big { font-size: 1.35rem; padding: 14px 30px; cursor: pointer; }
+button.btn { cursor: pointer; }
+.opts { display: grid; gap: 14px; }
+.opt { display: grid; gap: 6px; }
+.optlabel { font-family: var(--display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.9rem; color: var(--ink-soft); }
+.optlabel small { text-transform: none; letter-spacing: 0; font-family: var(--body); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1.5px solid var(--line); border-radius: 999px; padding: 3px; gap: 3px; }
+.seg button { font: 600 0.98rem/1 var(--body); padding: 10px 8px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--yellow); color: var(--on-yellow); }
+.dist { display: flex; align-items: center; gap: 10px; color: var(--ink-soft); font-size: 0.95rem; }
+.dist input { width: 7em; font: 500 1rem var(--body); padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--ground); color: var(--ink); }
+.link { justify-self: start; background: none; border: 0; padding: 4px 0; font: 700 1.05rem var(--display); letter-spacing: 0.05em; text-transform: uppercase; color: var(--yellow-ink); cursor: pointer; }
+.link:hover { text-decoration: underline; }
+.progress { display: grid; gap: 12px; padding-block: 24px; }
+.progress p { font-weight: 500; }
+.progress .track { height: 12px; border-radius: 999px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
+#bar { height: 100%; width: 0; background: var(--yellow); border-radius: 999px; transition: width .2s; }
+#result { display: grid; gap: 14px; }
+.fname { color: var(--ink-soft); font-size: 0.9rem; overflow-wrap: anywhere; }
+.board { background: #121210; color: #f5c518; border-radius: 14px; display: grid; grid-template-columns: repeat(4, 1fr); }
+.board div { padding: 14px 14px; display: grid; gap: 4px; border-left: 1px solid #2a2a24; min-width: 0; }
+.board div:first-child { border-left: 0; }
+.board b { font-family: var(--display); font-weight: 700; font-size: clamp(1.7rem, 3.4vw, 2.4rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.board b small { font-size: 0.5em; margin-left: 3px; color: #8c8a7a; }
+.board span { font-family: var(--display); font-size: 0.82rem; letter-spacing: 0.1em; text-transform: uppercase; color: #a3a190; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-family: var(--display); font-weight: 600; font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; border: 1.5px solid currentColor; }
+.chip.good { color: var(--good); } .chip.fair { color: var(--wait); } .chip.plain { color: var(--ink-soft); }
+.notes { margin: 0; padding: 12px 16px 12px 34px; border-radius: 12px; background: color-mix(in srgb, var(--yellow) 12%, transparent); display: grid; gap: 6px; font-size: 0.97rem; }
+.message { border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; background: color-mix(in srgb, var(--line) 45%, transparent); }
+.message.bad h3 { color: var(--bad); } .message.warn h3 { color: var(--wait); }
+.message ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.replay { display: grid; gap: 10px; }
+.replay canvas { width: 100%; max-width: 100%; height: auto; border-radius: 12px; background: #000; display: block; }
+.scrub { display: flex; align-items: center; gap: 12px; }
+.scrub input { flex: 1; min-width: 0; accent-color: var(--yellow); }
+.legend { font-size: 0.92rem; color: var(--ink-soft); }
+
 @media (max-width: 900px) {
   .hero .wrap, .setup, .example { grid-template-columns: 1fr; }
   .example .body { padding: 0 20px 22px; }
@@ -154,6 +203,10 @@ footer { padding-block: 32px 48px; color: var(--ink-soft); font-size: 0.9rem; }
   .status, .next { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
+  .board { grid-template-columns: repeat(2, 1fr); }
+  .board div:nth-child(3) { border-left: 0; }
+  .board div:nth-child(n+3) { border-top: 1px solid #2a2a24; }
+  .seg button { font-size: 0.9rem; padding: 10px 4px; }
   body { font-size: 16px; }
   section { padding-block: 52px; }
   .metrics, .steps { grid-template-columns: 1fr; }
@@ -172,27 +225,76 @@ footer { padding-block: 32px 48px; color: var(--ink-soft); font-size: 0.9rem; }
       <a href="#how">How it works</a>
       <a href="#film">Filming</a>
       <a href="#examples">Examples</a>
-      <a class="go" href="#guide">Instructions</a>
+      <a href="#guide">Guide</a>
+      <a class="go" href="#tool" data-start>Measure a hit</a>
     </nav>
   </div>
 </header>
 
 <main id="top">
-  <section class="hero">
+  <section class="hero" id="tool">
     <div class="wrap">
       <div class="copy">
-        <p class="eyebrow">Prototype · November 2026</p>
-        <h1>Film a swing.<br><span>Get the numbers.</span></h1>
-        <p class="lede">Record a hit in slow motion with a phone. The tracker finds the ball, follows its flight and works out how hard, how high and how far it was hit. No radar, no sensors, no extra equipment.</p>
-        <div class="cta">
-          <a class="btn solid" href="#guide">Try it yourself</a>
-          <a class="btn" href="#examples">See real examples</a>
+        <p class="eyebrow">Free · runs in your browser</p>
+        <h1>Measure<br><span>your hit.</span></h1>
+        <p class="lede">Choose a slow-motion video of a swing. The page finds the ball, follows its flight and tells you how hard, how high and how far it was hit.</p>
+        <p class="private"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" style="stroke:currentColor" stroke-width="2"/><rect x="5" y="10" width="14" height="11" rx="2" style="fill:currentColor"/></svg>Your video stays on your device. Nothing is uploaded.</p>
+      </div>
+      <div class="toolcard">
+        <div id="setup">
+          <div class="drop" id="drop">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="12" width="28" height="24" rx="4" fill="none" style="stroke:currentColor" stroke-width="3"/><path d="M34 21l9-5v16l-9-5z" style="fill:currentColor"/></svg>
+            <button class="btn solid big" id="pick" type="button">Choose a video</button>
+            <p class="hint">or drop it here · record it first in your Camera app's <b>Slo-Mo</b> mode</p>
+            <input id="file" type="file" accept="video/*,.mov,.mp4" hidden>
+          </div>
+          <div class="opts">
+            <div class="opt">
+              <span class="optlabel" id="l-filmed">Filmed in</span>
+              <div class="seg" role="group" aria-labelledby="l-filmed">
+                <button type="button" data-group="filmed" data-value="240" aria-pressed="true">Slo-Mo 240</button>
+                <button type="button" data-group="filmed" data-value="120" aria-pressed="false">Slo-Mo 120</button>
+                <button type="button" data-group="filmed" data-value="normal" aria-pressed="false">Normal speed</button>
+              </div>
+            </div>
+            <div class="opt">
+              <span class="optlabel" id="l-dir">Ball travels</span>
+              <div class="seg" role="group" aria-labelledby="l-dir">
+                <button type="button" data-group="direction" data-value="auto" aria-pressed="true">Either way</button>
+                <button type="button" data-group="direction" data-value="left" aria-pressed="false">← Left</button>
+                <button type="button" data-group="direction" data-value="right" aria-pressed="false">Right →</button>
+              </div>
+            </div>
+            <div class="opt">
+              <label class="optlabel" for="distance">Phone distance <small>(optional)</small></label>
+              <div class="dist"><input id="distance" type="number" inputmode="decimal" min="3" max="60" step="0.5" placeholder="e.g. 10"><span>ft from the ball's path</span></div>
+            </div>
+          </div>
+          <button class="link" id="sample" type="button">No video yet? Try a real sample →</button>
+        </div>
+
+        <div id="progress" class="progress" hidden>
+          <p id="ptext">Opening…</p>
+          <div class="track"><div id="bar"></div></div>
+        </div>
+
+        <div id="result" hidden>
+          <p class="fname" id="fname"></p>
+          <div class="board" id="board"></div>
+          <div class="chips" id="chips"></div>
+          <ul class="notes" id="notes" hidden></ul>
+          <div class="message" id="message" hidden></div>
+          <div class="replay" id="replay" hidden>
+            <canvas id="canvas" aria-label="The video with the ball's path drawn on it"></canvas>
+            <div class="scrub">
+              <button class="mini" id="play" type="button">Play</button>
+              <input id="slider" type="range" min="0" max="1" value="1" aria-label="Move through the pictures">
+            </div>
+            <p class="legend"><span class="key"><i style="background:#ff50ff"></i>pitch coming in</span><span class="key"><i style="background:#ffd400"></i>ball after the hit</span></p>
+          </div>
+          <button class="btn solid" id="again" type="button">Measure another video</button>
         </div>
       </div>
-      <figure class="photo">
-        <img src="media/real-hit.jpg" alt="Real batting practice: the pitch traced in pink coming in, the hit ball traced in yellow going back out" width="1200" height="600">
-        <figcaption><span class="key"><i style="background:#ff50ff"></i>pitch coming in</span><span class="key"><i style="background:#ffd700"></i>ball after the hit</span>Found automatically in a real 240 fps video.</figcaption>
-      </figure>
     </div>
   </section>
 
@@ -370,9 +472,9 @@ footer { padding-block: 32px 48px; color: var(--ink-soft); font-size: 0.9rem; }
   <section id="guide">
     <div class="wrap">
       <div class="head">
-        <p class="eyebrow">Instructions</p>
-        <h2>Measure your first hit in 10 minutes</h2>
-        <p class="lede">Step by step, with every command ready to copy. It uses the same real videos shown above.</p>
+        <p class="eyebrow">Guide</p>
+        <h2>How to measure a hit</h2>
+        <p class="lede">Filming tips, the settings, and what each number means.</p>
       </div>
       <div class="guide">
         <div class="guidebar">
@@ -407,6 +509,9 @@ footer { padding-block: 32px 48px; color: var(--ink-soft); font-size: 0.9rem; }
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
 <script>
 (function () {
   var md = document.getElementById("md");
