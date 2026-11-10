@@ -5,6 +5,9 @@ angle, distance and pitch speed. The video is processed on the device and never 
 
 Live: https://kevin-arcus.github.io/lanista-ball-tracker/
 
+**The source and the issues have moved to `lanistas-pgh/Lanista-video-analysis-engine`** (folder `docs/`,
+branch `merge-ball-tracker` until it is merged). This repo only serves the live page.
+
 | File | What it is |
 |---|---|
 | `index.html` | The page and the measuring tool |
