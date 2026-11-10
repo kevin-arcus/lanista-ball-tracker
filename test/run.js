@@ -27,8 +27,9 @@ ff.stdout.on("data", (d) => {
 ff.on("close", () => {
   const r = eng.finish();
   console.log(`${video}: ${idx - start} frames ${w}x${h}, ${r.candidates} candidates, ${r.tracks.length} tracks, ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  console.log(`  moved ${(100 * r.shake).toFixed(0)}% of frames  balls ${r.balls}`);
   r.events.forEach((e) => {
-    if (e.type === "hit") console.log(`  hit frames ${e.batted[0].frame}-${e.batted[e.batted.length - 1].frame}: EV ${e.exitVelocity.toFixed(1)} ± ${e.m.sigmaMph.toFixed(1)} mph, LA ${e.launchAngle.toFixed(1)}, carry ${Math.round(e.carryFt)} ft, ${e.confidence}, n=${e.m.n}, scale=${e.m.scale.method}, d=${e.m.scale.dmed.toFixed(1)} ${e.m.warnings}` + (e.pitchM ? `, pitch ${e.pitchM.speedMph.toFixed(1)}` : ""));
+    if (e.type === "hit") console.log(`  hit frames ${e.batted[0].frame}-${e.batted[e.batted.length - 1].frame}: EV ${e.exitVelocity.toFixed(1)} ± ${e.m.sigmaMph.toFixed(1)} mph, LA ${e.launchAngle.toFixed(1)}, carry ${Math.round(e.carryFt)} ft, ${e.confidence}, n=${e.m.n}, scale=${e.m.scale.method}, d=${e.m.scale.dmed.toFixed(1)} ${e.m.warnings}` + (e.pitchM ? `, pitch ${e.pitchM.speedMph.toFixed(1)}` : "") + `, other balls ${e.otherBalls}`);
     else console.log(`  pitch ${e.pitchM.speedMph.toFixed(1)} mph ${e.confidence}`);
   });
 });

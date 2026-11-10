@@ -51,6 +51,10 @@ Pink is the pitch coming in and yellow is the ball after the hit.
 | *No hit could be measured* | Film from the side, use a tripod and good light, and trim the clip to the swing |
 | *This browser can't read this video format* | Open the page in Safari, or on iPhone set Settings → Camera → Formats → **Most Compatible** and film again |
 | *The speed is a rough number* | The phone wasn't side-on to the ball's flight. Move it so it faces across the ball's path |
+| *This video is long* | Trim it to the swing: in Photos tap **Edit** and drag the ends in close around the hit. Or tap **Check the whole video anyway** and wait a few minutes |
+| *The phone moved during the video* | Put the phone on a tripod, or lean it on something steady, and don't follow the ball with it |
+| *Another ball was flying in the picture* | Play the replay and check that the yellow path follows the hit ball. Film where no one else is hitting into the picture |
+| *This video has 2 hits* | The numbers are for the clearest hit. Film one swing per video |
 
 ---
 

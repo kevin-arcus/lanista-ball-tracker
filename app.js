@@ -2,7 +2,7 @@
  * and shows the numbers plus a replay of the ball's path. Nothing is uploaded anywhere. */
 (function () {
   "use strict";
-  var MAX_W = 960, MAX_FRAMES = 6000;
+  var MAX_W = 960, MAX_FRAMES = 6000, LONG_FRAMES = 2400, SHAKY = 0.08; // tripod clips score 0-2%, handheld or panning 10-80%
   var $ = function (id) { return document.getElementById(id); };
   var els = {
     pick: $("pick"), file: $("file"), drop: $("drop"), sample: $("sample"), tool: $("tool"),
@@ -51,7 +51,7 @@
   }
   function showMessage(kind, title, body, tips) {
     els.progress.hidden = true; els.result.hidden = false; els.setup.hidden = true;
-    els.board.hidden = true; els.chips.innerHTML = ""; els.notes.innerHTML = ""; els.replay.hidden = !state.hasReplay;
+    els.board.hidden = true; els.chips.innerHTML = ""; els.notes.innerHTML = ""; els.notes.hidden = true; els.replay.hidden = !state.hasReplay;
     els.message.hidden = false;
     els.message.className = "message " + kind;
     els.message.innerHTML = "<h3>" + title + "</h3><p>" + body + "</p>" + (tips ? "<ul>" + tips.map(function (t) { return "<li>" + t + "</li>"; }).join("") + "</ul>" : "");
@@ -216,20 +216,22 @@
   }
 
   // ------------------------------------------------------------ main flow
-  async function run(file) {
+  async function run(file, opts) {
+    opts = opts || {};
     reset();
     els.fname.textContent = file.name;
     showProgress("Opening " + file.name + "…", 0);
     if (state.url) URL.revokeObjectURL(state.url);
     state.url = URL.createObjectURL(file);
     state.hasReplay = false;
-    var engine = null, info = null, refused = false;
+    var engine = null, info = null, refused = false, tooLong = false;
     var dist = parseFloat($("distance").value);
     function onInfo(i) {
       info = i;
       var fps = pickFps(i.fileFps);
       info.fps = fps;
       if (fps < 100) { refused = true; return false; }
+      if (i.frames > LONG_FRAMES && !opts.allowLong) { tooLong = true; refused = true; return false; }
       engine = BallEngine.create({ fps: fps, width: i.w, height: i.h, direction: choice.direction,
         cameraDistanceM: dist > 0 ? dist * 0.3048 : null, hfovDeg: dist > 0 ? 65 : null });
       return true;
@@ -251,7 +253,7 @@
           ["Open this page in <b>Safari</b> on a Mac or iPhone, or in Chrome on a Mac.", "Or on iPhone: Settings → Camera → Formats → <b>Most Compatible</b>, then film again."]);
       }
       try {
-        engine = null; info = null; refused = false;
+        engine = null; info = null; refused = false; tooLong = false;
         out = await decodeVideoElement(state.url, onInfo, function (idx, g, r, n, t) { if (!refused) onFrame(idx, g, r, n, t); });
       } catch (e2) {
         return showMessage("bad", "This video couldn't be opened", "Try an .mp4 or .mov file straight from your phone.");
@@ -259,6 +261,16 @@
     }
     if (!info) return showMessage("bad", "This video couldn't be opened", "Try an .mp4 or .mov file straight from your phone.");
     state.times = info.times;
+    if (tooLong) {
+      showMessage("warn", "This video is long",
+        "It has " + info.frames.toLocaleString() + " pictures. Checking all of them can take several minutes, especially on a phone, and a long video often holds more than one swing.",
+        ["<b>Trim it to the swing:</b> in Photos, tap <b>Edit</b> and drag the ends of the timeline in close around the hit, then save it.", "Then choose the trimmed video here."]);
+      var anyway = document.createElement("button");
+      anyway.type = "button"; anyway.className = "btn"; anyway.textContent = "Check the whole video anyway";
+      anyway.addEventListener("click", function () { run(file, { allowLong: true }); });
+      els.message.appendChild(anyway);
+      return;
+    }
     if (refused) {
       return showMessage("bad", "This video isn't slow motion",
         "It plays at " + Math.round(info.fileFps) + " pictures per second, so the ball shows up in only 1 or 2 pictures. That's not enough to measure it.",
@@ -268,15 +280,17 @@
     await new Promise(function (r) { setTimeout(r, 30); });
     var res = engine.finish();
     state.res = res; state.info = info;
+    var shaky = res.shake >= SHAKY;
     var good = res.events.filter(function (e) { return e.confidence !== "low"; });
-    var hit = good.filter(function (e) { return e.type === "hit"; }).sort(function (a, b) { return b.m.n - a.m.n; })[0];
+    var hits = good.filter(function (e) { return e.type === "hit"; });
+    var hit = hits.slice().sort(function (a, b) { return b.m.n - a.m.n; })[0];
     setupReplay(hit);
     if (!hit) {
       return showMessage("warn", "No hit could be measured in this video",
         "The tracker didn't find a ball flying clearly enough to measure.",
-        (info.fileFps < 100 ? ["This file plays at " + Math.round(info.fileFps) + " pictures per second and was treated as <b>Slo-Mo " + info.fps + "</b>. If it's a normal-speed video, it can't be measured: film in Slo-Mo."] : []).concat(["Film from the <b>side</b>, about 10 ft from where the ball flies.", "Use a <b>tripod</b> and good light.", "Trim the video to just the swing.", "If the ball flies left or right in the picture, set “Ball travels” to match."]));
+        (shaky ? ["<b>The phone moved</b> during the video. Put it on a tripod, or lean it on something steady, and don't follow the ball with it."] : []).concat(info.fileFps < 100 ? ["This file plays at " + Math.round(info.fileFps) + " pictures per second and was treated as <b>Slo-Mo " + info.fps + "</b>. If it's a normal-speed video, it can't be measured: film in Slo-Mo."] : []).concat(["Film from the <b>side</b>, about 10 ft from where the ball flies.", shaky ? "Use good light." : "Use a <b>tripod</b> and good light.", "Trim the video to just the swing.", "If the ball flies left or right in the picture, set “Ball travels” to match."]));
     }
-    showResult(hit, out && out.truncated);
+    showResult(hit, { truncated: out && out.truncated, shaky: shaky, hits: hits.length });
   }
 
   function warnText(w) {
@@ -284,7 +298,7 @@
       small: "The ball is small in the picture. Move the phone closer, or enter the phone's distance.",
       few: "The ball was seen in only a few pictures, so the numbers are less exact. A closer, side-on camera helps." }[w];
   }
-  function showResult(e, truncated) {
+  function showResult(e, extra) {
     els.progress.hidden = true; els.message.hidden = true; els.setup.hidden = true;
     els.result.hidden = false; els.board.hidden = false;
     var cell = function (v, unit, label) { return "<div><b>" + v + "<small>" + unit + "</small></b><span>" + label + "</span></div>"; };
@@ -294,14 +308,18 @@
       cell(Math.round(e.carryFt), "ft", "Distance") +
       cell(e.pitchM ? e.pitchM.speedMph.toFixed(1) : "—", e.pitchM ? "mph" : "", "Pitch speed");
     var chips = [];
-    chips.push('<span class="chip ' + (e.confidence === "high" ? "good" : "fair") + '">' + (e.confidence === "high" ? "Reliable reading" : "Fair reading") + "</span>");
+    var reliable = e.confidence === "high" && !extra.shaky && !e.otherBalls;
+    chips.push('<span class="chip ' + (reliable ? "good" : "fair") + '">' + (reliable ? "Reliable reading" : "Fair reading") + "</span>");
     if (e.barrel) chips.push('<span class="chip good">Barrel</span>');
     chips.push('<span class="chip plain">' + kind(e.launchAngle) + "</span>");
     chips.push('<span class="chip plain">' + (e.m.scale.method === "camera" ? "Scaled by your phone distance" : "Scaled by the ball's size") + "</span>");
     els.chips.innerHTML = chips.join("");
     var notes = e.m.warnings.map(warnText).filter(Boolean);
     if (state.info && state.info.fileFps < 100) notes.push("This file plays at " + Math.round(state.info.fileFps) + " pictures per second, so it was treated as Slo-Mo " + state.info.fps + " (your “Filmed in” choice).");
-    if (truncated) notes.push("Only the first " + MAX_FRAMES + " pictures were checked. Trim long videos to the swing.");
+    if (extra.shaky) notes.push("The phone moved during the video, so the numbers are less exact. Use a tripod, or lean the phone on something steady.");
+    if (e.otherBalls && !extra.shaky) notes.push("Another ball was flying in the picture at the same time. Check in the replay that the yellow path follows the hit ball.");
+    if (extra.hits > 1) notes.push("This video has " + extra.hits + " hits. These numbers are for the clearest one. Film one swing per video.");
+    if (extra.truncated) notes.push("Only the first " + MAX_FRAMES.toLocaleString() + " pictures were checked. Trim long videos to the swing.");
     els.notes.innerHTML = notes.map(function (n) { return "<li>" + n + "</li>"; }).join("");
     els.notes.hidden = !notes.length;
   }

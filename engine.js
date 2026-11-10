@@ -14,6 +14,7 @@
   // ---------------------------------------------------------------- physics
   var G = 9.81, MASS = 0.145, DIAM = 0.0737, RAD = DIAM / 2, AREA = Math.PI * RAD * RAD;
   var RHO = 1.2, CD = 0.38, MPH = 2.2369362920544, FT = 3.280839895;
+  var MAX_EV_MPH = 125, MAX_PITCH_MPH = 110; // just above the fastest batted ball (122 mph) and pitch (106 mph) on record
   var KDRAG = 0.5 * RHO * CD * AREA / MASS;
 
   function accel(v, axis, spin) {
@@ -115,6 +116,38 @@
     return out;
   }
 
+  // Did the whole picture shift between two frames (a moving phone, not a moving ball)?
+  // Block matching on a coarse grid at half resolution: returns true when most textured blocks
+  // agree on the same non-zero shift, false when they stay put, null when the picture has no texture.
+  function cameraMoved(a, b, w, h) {
+    var B = 16, R = 4, step = 2, votes = new Map(), textured = 0, still = 0;
+    var hw = w >> 1, hh = h >> 1;
+    function px(img, x, y) { return img[(y << 1) * w + (x << 1)]; }
+    for (var by = R + 2; by + B + R + 2 < hh; by += 2 * B) {
+      for (var bx = R + 2; bx + B + R + 2 < hw; bx += 2 * B) {
+        var s1 = 0, s2 = 0, x, y;
+        for (y = 0; y < B; y += step) for (x = 0; x < B; x += step) { var v = px(b, bx + x, by + y); s1 += v; s2 += v * v; }
+        var cnt = (B / step) * (B / step), varr = s2 / cnt - (s1 / cnt) * (s1 / cnt);
+        if (varr < 60) continue;
+        textured++;
+        var best = Infinity, bdx = 0, bdy = 0, sad0 = 0;
+        for (var dy = -R; dy <= R; dy++) for (var dx = -R; dx <= R; dx++) {
+          var sad = 0;
+          for (y = 0; y < B && sad < best; y += step) for (x = 0; x < B; x += step) {
+            var d = px(b, bx + x, by + y) - px(a, bx + x + dx, by + y + dy); sad += d < 0 ? -d : d;
+          }
+          if (!dx && !dy) sad0 = sad;
+          if (sad < best) { best = sad; bdx = dx; bdy = dy; }
+        }
+        if ((!bdx && !bdy) || sad0 < 1.25 * best + cnt) { still++; continue; }
+        var key = bdx + "," + bdy; votes.set(key, (votes.get(key) || 0) + 1);
+      }
+    }
+    if (textured < 8) return null;
+    var moved = 0; votes.forEach(function (v) { moved += v; }); // sub-pixel motion splits votes across shifts
+    return still < 0.5 * textured && moved >= 0.5 * textured;
+  }
+
   function Detector(cfg) {
     this.cfg = cfg;
     this.w = cfg.width; this.h = cfg.height;
@@ -123,6 +156,7 @@
     this.buf = []; // {idx, gray, rgba}
     this.done = -1;
     this.byFrame = {};
+    this.motion = []; // per sampled frame: did the whole picture move? (camera shake check)
   }
   Detector.prototype.push = function (idx, gray, rgba) {
     this.buf.push({ idx: idx, gray: gray, rgba: rgba });
@@ -169,6 +203,8 @@
     var thr = Math.max(cfg.minThreshold, cfg.noiseK * (1.4826 * med + 1e-3));
     var mask = new Uint8Array(n);
     for (i = 0; i < n; i++) mask[i] = diff[i] > thr ? 1 : 0;
+    var back = pos + this.offsets[0];
+    if (back >= 0 && cur.idx % 3 === 0) { var mv = cameraMoved(this.buf[back].gray, g, w, h); if (mv !== null) this.motion.push(mv); }
     for (i = 0; i < cfg.closeIter; i++) mask = dilate3(mask, w, h);
     for (i = 0; i < cfg.closeIter; i++) mask = erode3(mask, w, h);
     this.components(cur, diff, mask);
@@ -639,6 +675,9 @@
         exitVelocity: m.speedMph, launchAngle: m.angle, carryFt: carryFt(m.speedMs, m.angle, opts.contactHeight || 0.9),
         barrel: barrel(m.speedMph, m.angle) };
       if (pitch) { ev.pitch = pitch; ev.pitchM = measure(pitch, calib, pitch[0].frame / fps); }
+      // Faster than any batted ball on record (122 mph): the video's frame rate or scale is wrong.
+      if (m.speedMph > MAX_EV_MPH) ev.confidence = "low";
+      if (ev.pitchM && ev.pitchM.speedMph > MAX_PITCH_MPH) ev.pitchM = null;
       events.push(ev);
     });
     return events;
@@ -661,7 +700,24 @@
         refineTracks(tracks);
         var events = buildEvents(tracks, calib, o);
         var cands = 0; for (var f in byFrame) cands += byFrame[f].length;
-        return { events: events, tracks: tracks, candidates: cands, fps: fps };
+        // Fast, clean tracks that cross the picture: other balls in flight, not hands, knobs or a rolling ball.
+        var balls = tracks.filter(function (tr) {
+          if (tr.length < 6) return false;
+          var a = tr[0], b = tr[tr.length - 1], d = median(tr.map(function (p) { return p.diameter; }));
+          if (Math.hypot(b.x - a.x, b.y - a.y) < 4 * d) return false;
+          var m = measure(tr, calib, null, false);
+          return m.speedMph >= 30 && m.sigmaMph / Math.max(m.speedMph, 1e-6) < 0.08;
+        });
+        events.forEach(function (ev) {
+          if (ev.type !== "hit") return;
+          var own = [ev.batted, ev.pitch].filter(Boolean);
+          var a = (ev.pitch || ev.batted)[0].frame, b = ev.batted[ev.batted.length - 1].frame;
+          ev.otherBalls = balls.filter(function (tr) {
+            return own.indexOf(tr) < 0 && tr[0].frame <= b + 2 && tr[tr.length - 1].frame >= a - 2;
+          }).length;
+        });
+        var shake = det.motion.length ? det.motion.filter(Boolean).length / det.motion.length : 0;
+        return { events: events, tracks: tracks, candidates: cands, fps: fps, balls: balls.length, shake: shake };
       }
     };
   }
