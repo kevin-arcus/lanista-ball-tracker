@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lanista Ball Tracker</title>
+<meta name="description" content="How the Lanista prototype measures a baseball hit from a slow-motion phone video, with real examples and a step-by-step guide.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23f5c518'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* One calm reading column, a sticky section bar, real footage as the hero.
+   Lanista brand: black and yellow, light and dark themes. */
+:root {
+  --ground: #f3f3ef; --panel: #ffffff; --ink: #16160f; --ink-soft: #55554a; --line: #dcdcd2;
+  --yellow: #f2c200; --yellow-ink: #8a6d00; --on-yellow: #16160f;
+  --good: #1f7a3d; --bad: #b3261e; --wait: #8a6d00; --code: #121210;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #0e0e0c; --panel: #181815; --ink: #f1f0e8; --ink-soft: #a9a898; --line: #2b2b26;
+    --yellow: #f5c518; --yellow-ink: #f5c518; --on-yellow: #121210;
+    --good: #57c27a; --bad: #ff7a70; --wait: #f5c518; --code: #050504; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 17px/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); line-height: 1.05; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 700; text-transform: uppercase; }
+h2 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 700; text-transform: uppercase; }
+h3 { font-size: 1.45rem; font-weight: 600; }
+p { margin: 0; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.88em; }
+.lede { font-size: 1.2rem; color: var(--ink-soft); max-width: 36em; }
+.eyebrow { font-family: var(--display); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--yellow-ink); font-size: 0.95rem; }
+a { color: inherit; }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; border-radius: 4px; }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--ground) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; align-items: center; gap: 20px; height: 56px; }
+.brand { font-family: var(--display); font-weight: 700; font-size: 1.25rem; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.brand i { width: 14px; height: 14px; border-radius: 50%; background: var(--yellow); display: inline-block; }
+.nav { display: flex; gap: 4px; margin-left: auto; }
+.nav a { font-family: var(--display); font-weight: 600; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; padding: 6px 12px; border-radius: 999px; white-space: nowrap; color: var(--ink-soft); }
+.nav a:hover { color: var(--ink); background: var(--panel); }
+.nav a.go { background: var(--yellow); color: var(--on-yellow); }
+
+section { padding-block: 72px; border-bottom: 1px solid var(--line); }
+section > .wrap { display: grid; gap: 32px; }
+.head { display: grid; gap: 12px; max-width: 720px; }
+
+.hero { padding-block: 48px 64px; }
+.hero .wrap { display: grid; grid-template-columns: 1fr 1.2fr; gap: 40px; align-items: center; }
+.hero .copy { display: grid; gap: 20px; min-width: 0; }
+.hero h1 span { color: var(--yellow-ink); }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn { font-family: var(--display); font-weight: 700; font-size: 1.15rem; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; padding: 12px 22px; border-radius: 999px; border: 2px solid var(--yellow); }
+.btn.solid { background: var(--yellow); color: var(--on-yellow); }
+.photo { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-width: 0; }
+.photo img { display: block; width: 100%; }
+.photo figcaption { padding: 12px 16px; font-size: 0.95rem; color: var(--ink-soft); }
+.key { display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; color: var(--ink); font-weight: 500; }
+.key i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.metric { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 8px; align-content: start; }
+.metric .q { font-family: var(--display); font-weight: 700; font-size: 1.6rem; text-transform: uppercase; }
+.metric .unit { font-family: var(--display); color: var(--yellow-ink); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.95rem; }
+.metric p { color: var(--ink-soft); font-size: 1rem; }
+
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; counter-reset: s; list-style: none; padding: 0; margin: 0; }
+.steps li { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.steps li::before { counter-increment: s; content: counter(s); font-family: var(--display); font-weight: 700; font-size: 1.3rem; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--yellow); color: var(--on-yellow); }
+.steps p { color: var(--ink-soft); font-size: 1rem; }
+.figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; overflow-x: auto; }
+.figure svg { display: block; width: 100%; height: auto; }
+.figure svg.wide { min-width: 560px; }
+.figure figcaption { color: var(--ink-soft); font-size: 0.95rem; margin-top: 10px; }
+
+.setup { display: grid; grid-template-columns: 1.1fr 1fr; gap: 32px; align-items: start; }
+.checks { display: grid; gap: 22px; min-width: 0; }
+.checks ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.checks li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+.checks li svg { width: 24px; height: 24px; margin-top: 2px; }
+.checks li b { font-weight: 600; }
+.checks li span { color: var(--ink-soft); display: block; font-size: 0.98rem; }
+.checks h3 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.more { font-family: var(--display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; color: var(--yellow-ink); }
+.more:hover { text-decoration: underline; }
+
+.examples { display: grid; gap: 28px; }
+.example { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.example img { display: block; width: 100%; height: auto; }
+.example.full { grid-template-columns: 1fr; }
+.example.full .body { padding: 0 24px 24px; }
+.example .body { padding: 24px 24px 24px 0; display: grid; gap: 12px; align-content: center; min-width: 0; }
+.example .body p { color: var(--ink-soft); }
+.pill { justify-self: start; font-family: var(--display); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; border: 1.5px solid currentColor; }
+.pill.good { color: var(--good); } .pill.bad { color: var(--bad); }
+.links { display: flex; flex-wrap: wrap; gap: 16px; }
+
+.status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.state { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 8px; align-content: start; border-top: 4px solid var(--c); }
+.state.good { --c: var(--good); } .state.wait { --c: var(--wait); }
+.state b { font-family: var(--display); font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
+.state p { color: var(--ink-soft); font-size: 1rem; }
+.fps { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+.fps h3 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.fpsrow { display: grid; grid-template-columns: 4.2em 1fr 7em; gap: 12px; align-items: center; }
+.fpsrow b { font-family: var(--display); font-size: 1.25rem; }
+.dots { display: flex; gap: 4px; flex-wrap: wrap; }
+.dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--yellow); display: block; }
+.fpsrow em { font-style: normal; font-size: 0.95rem; color: var(--ink-soft); text-align: right; }
+.fpsrow em.no { color: var(--bad); font-weight: 600; }
+
+.guide { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: clamp(20px, 4vw, 40px); min-width: 0; }
+.guidebar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; color: var(--ink-soft); }
+.mini { font-family: var(--display); font-weight: 700; font-size: 1rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--yellow); background: transparent; color: var(--ink); cursor: pointer; text-decoration: none; }
+.mini:hover { background: var(--yellow); color: var(--on-yellow); }
+.md { max-width: 760px; }
+.md h1 { font-size: 2.2rem; margin: 8px 0 12px; }
+.md h2 { font-size: 1.6rem; margin: 36px 0 10px; }
+.md p, .md ul, .md ol { margin: 0 0 14px; }
+.md li { margin-bottom: 6px; }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
+.md code { background: color-mix(in srgb, var(--line) 60%, transparent); padding: 1px 6px; border-radius: 4px; }
+.md .pre { position: relative; margin: 0 0 16px; }
+.md pre { background: var(--code); color: #f1f0e8; padding: 14px 84px 14px 16px; border-radius: 10px; overflow-x: auto; margin: 0; }
+.md pre code { background: none; padding: 0; color: inherit; font-size: 0.9rem; }
+.md .copy { position: absolute; top: 8px; right: 8px; font-family: var(--display); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; background: var(--yellow); color: #121210; border: 0; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.md table { border-collapse: collapse; width: 100%; margin: 0 0 16px; font-size: 0.97rem; }
+.md th, .md td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.md th { font-family: var(--display); letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.85rem; color: var(--ink-soft); }
+.tablewrap { overflow-x: auto; }
+
+.next { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.next div { display: grid; gap: 8px; align-content: start; border-top: 3px solid var(--yellow); padding-top: 14px; }
+.next p { color: var(--ink-soft); font-size: 1rem; }
+footer { padding-block: 32px 48px; color: var(--ink-soft); font-size: 0.9rem; }
+
+@media (max-width: 900px) {
+  .hero .wrap, .setup, .example { grid-template-columns: 1fr; }
+  .example .body { padding: 0 20px 22px; }
+  .metrics, .steps { grid-template-columns: repeat(2, 1fr); }
+  .status, .next { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  body { font-size: 16px; }
+  section { padding-block: 52px; }
+  .metrics, .steps { grid-template-columns: 1fr; }
+  .nav a:not(.go) { display: none; }
+  .fpsrow { grid-template-columns: 4.2em 1fr; }
+  .fpsrow em { grid-column: 2; text-align: left; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top"><i></i>Lanista Ball Tracker</a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#film">Filming</a>
+      <a href="#examples">Examples</a>
+      <a class="go" href="#guide">Instructions</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="copy">
+        <p class="eyebrow">Prototype · November 2026</p>
+        <h1>Film a swing.<br><span>Get the numbers.</span></h1>
+        <p class="lede">Record a hit in slow motion with a phone. The tracker finds the ball, follows its flight and works out how hard, how high and how far it was hit. No radar, no sensors, no extra equipment.</p>
+        <div class="cta">
+          <a class="btn solid" href="#guide">Try it yourself</a>
+          <a class="btn" href="#examples">See real examples</a>
+        </div>
+      </div>
+      <figure class="photo">
+        <img src="media/real-hit.jpg" alt="Real batting practice: the pitch traced in pink coming in, the hit ball traced in yellow going back out" width="1200" height="600">
+        <figcaption><span class="key"><i style="background:#ff50ff"></i>pitch coming in</span><span class="key"><i style="background:#ffd700"></i>ball after the hit</span>Found automatically in a real 240 fps video.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="get">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">What you get</p>
+        <h2>Four numbers from every hit</h2>
+      </div>
+      <div class="metrics">
+        <div class="metric"><span class="unit">mph</span><span class="q">Exit velocity</span><p>How hard the ball came off the bat.</p></div>
+        <div class="metric"><span class="unit">degrees</span><span class="q">Launch angle</span><p>How steeply it went up: ground ball, line drive or fly ball.</p></div>
+        <div class="metric"><span class="unit">feet</span><span class="q">Distance</span><p>How far the ball would carry before landing.</p></div>
+        <div class="metric"><span class="unit">mph</span><span class="q">Pitch speed</span><p>How fast the pitch came in, when it's in the picture.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">How it works</p>
+        <h2>A slow-motion video is a stack of pictures</h2>
+        <p class="lede">A phone in slo-mo takes 240 pictures every second. If you know where the ball is in each picture, you know how fast it's going.</p>
+      </div>
+      <ol class="steps">
+        <li><h3>Record</h3><p>Film the swing in slow motion from the side, with the phone on a tripod.</p></li>
+        <li><h3>Spot the ball</h3><p>In every picture it looks for something small, round and moving. The bat, the hitter and the net are ignored.</p></li>
+        <li><h3>Follow its flight</h3><p>It connects the ball from picture to picture. A real ball flies in a smooth curve, so anything else drops out.</p></li>
+        <li><h3>Do the math</h3><p>The baseball is the ruler (it's 2.9 in wide) and the time between pictures is the clock.</p></li>
+      </ol>
+      <figure class="figure">
+        <svg class="wide" viewBox="0 0 900 270" role="img" aria-label="The ball in consecutive slow-motion pictures, evenly spaced along a rising path">
+          <line x1="30" y1="232" x2="870" y2="232" style="stroke:var(--line)" stroke-width="2"/>
+          <line x1="110" y1="232" x2="110" y2="178" style="stroke:var(--ink-soft)" stroke-width="5"/>
+          <line x1="40" y1="120" x2="122" y2="176" style="stroke:var(--ink-soft)" stroke-width="9" stroke-linecap="round"/>
+          <path d="M120 170 Q 480 30 860 52" fill="none" style="stroke:var(--yellow)" stroke-width="2" stroke-dasharray="4 6"/>
+          <g style="fill:var(--panel);stroke:var(--ink)" stroke-width="2">
+            <circle cx="120" cy="170" r="10"/><circle cx="210" cy="136" r="10"/><circle cx="300" cy="108" r="10"/>
+            <circle cx="390" cy="86" r="10"/><circle cx="480" cy="70" r="10"/><circle cx="570" cy="59" r="10"/>
+            <circle cx="660" cy="53" r="10"/><circle cx="750" cy="51" r="10"/><circle cx="840" cy="52" r="10"/>
+          </g>
+          <g font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="17" style="fill:var(--ink-soft)" text-anchor="middle">
+            <text x="120" y="200">contact</text><text x="210" y="166">+4 ms</text><text x="300" y="138">+8 ms</text>
+            <text x="390" y="116">+12 ms</text><text x="480" y="100">+17 ms</text>
+          </g>
+          <line x1="210" y1="232" x2="300" y2="232" style="stroke:var(--yellow)" stroke-width="6"/>
+          <text x="320" y="258" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="19" font-weight="600" style="fill:var(--ink)">Gap between pictures = how far the ball flew in 1/240 of a second</text>
+        </svg>
+        <figcaption>Each circle is the ball in one picture. Wider gaps mean a faster ball. The slope of the path is the launch angle.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="film">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Filming</p>
+        <h2>Set the phone up once, then just swing</h2>
+        <p class="lede">The setup matters more than anything else. Get these right and the numbers can be trusted.</p>
+      </div>
+      <div class="setup">
+        <figure class="figure">
+          <svg viewBox="0 0 520 380" role="img" aria-label="Seen from above: the phone sits about 10 feet to the side of the ball's flight, facing across it">
+            <line x1="60" y1="110" x2="470" y2="110" style="stroke:var(--yellow)" stroke-width="5" stroke-linecap="round"/>
+            <polygon points="470,96 498,110 470,124" style="fill:var(--yellow)"/>
+            <text x="300" y="88" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="22" font-weight="700" style="fill:var(--ink)" text-anchor="middle">BALL FLIGHT</text>
+            <polygon points="70,128 92,128 92,140 81,150 70,140" style="fill:var(--panel);stroke:var(--ink)" stroke-width="2"/>
+            <circle cx="60" cy="72" r="18" fill="none" style="stroke:var(--ink-soft)" stroke-width="3"/>
+            <text x="60" y="40" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="18" style="fill:var(--ink-soft)" text-anchor="middle">hitter</text>
+            <polygon points="190,300 40,124 380,124" style="fill:var(--yellow)" opacity="0.13"/>
+            <line x1="190" y1="118" x2="190" y2="290" style="stroke:var(--ink)" stroke-width="2" stroke-dasharray="6 6"/>
+            <rect x="198" y="186" width="118" height="34" rx="6" style="fill:var(--panel);stroke:var(--line)"/>
+            <text x="257" y="209" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="20" font-weight="700" style="fill:var(--ink)" text-anchor="middle">about 10 ft</text>
+            <rect x="166" y="296" width="48" height="26" rx="5" style="fill:var(--ink)"/>
+            <circle cx="190" cy="309" r="6" style="fill:var(--yellow)"/>
+            <line x1="176" y1="322" x2="160" y2="352" style="stroke:var(--ink-soft)" stroke-width="3"/>
+            <line x1="204" y1="322" x2="220" y2="352" style="stroke:var(--ink-soft)" stroke-width="3"/>
+            <line x1="190" y1="322" x2="190" y2="356" style="stroke:var(--ink-soft)" stroke-width="3"/>
+            <text x="250" y="320" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="20" font-weight="700" style="fill:var(--ink)">PHONE ON TRIPOD</text>
+            <text x="250" y="342" font-family="Barlow, Arial, sans-serif" font-size="15" style="fill:var(--ink-soft)">sideways, level, facing across</text>
+          </svg>
+          <figcaption>Seen from above. The phone looks across the ball's path, a step in front of the hitter.</figcaption>
+        </figure>
+        <div class="checks">
+          <div>
+            <h3>Do</h3>
+            <ul>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" style="fill:var(--good)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" style="stroke:var(--panel)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Record in Slo-Mo at 240 fps</b><span>On iPhone: Settings, then Camera, then Record Slo-mo, then 1080p at 240 fps.</span></div></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" style="fill:var(--good)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" style="stroke:var(--panel)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Tripod, phone sideways</b><span>A still camera makes the ball easy to spot.</span></div></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" style="fill:var(--good)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" style="stroke:var(--panel)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Side-on, about 10 ft away</b><span>Facing across where the ball will fly, so it crosses the picture.</span></div></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" style="fill:var(--good)"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" style="stroke:var(--panel)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Keep it level, use good light</b><span>A tilted phone tilts the launch angle by the same amount.</span></div></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Avoid</h3>
+            <ul>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" style="fill:var(--bad)"/><path d="M8 8l8 8M16 8l-8 8" style="stroke:var(--panel)" stroke-width="2.4" stroke-linecap="round"/></svg><div><b>Normal-speed video</b><span>The ball shows up in only 1 or 2 pictures. The tracker refuses it.</span></div></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" style="fill:var(--bad)"/><path d="M8 8l8 8M16 8l-8 8" style="stroke:var(--panel)" stroke-width="2.4" stroke-linecap="round"/></svg><div><b>Filming from behind or in front</b><span>The ball flies toward or away from the lens, so its speed is hard to read.</span></div></li>
+              <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" style="fill:var(--bad)"/><path d="M8 8l8 8M16 8l-8 8" style="stroke:var(--panel)" stroke-width="2.4" stroke-linecap="round"/></svg><div><b>Holding the phone</b><span>Shaking makes the background move along with the ball.</span></div></li>
+            </ul>
+          </div>
+          <a class="more" href="https://www.youtube.com/watch?v=tjTG1PFzL7I&amp;t=46s" target="_blank" rel="noopener">Watch Blast's camera-setup video (same idea) →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="examples">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Examples</p>
+        <h2>Tested on real videos</h2>
+        <p class="lede">Three real clips from YouTube, and what the tracker did with each.</p>
+      </div>
+      <div class="examples">
+        <article class="example full">
+          <img src="media/real-hit-sequence.jpg" alt="Three pictures from the clip: the pitch coming in, just before contact, and the ball after the hit, each circled by the tracker" loading="lazy" width="1500" height="275">
+          <div class="body">
+            <span class="pill good">Ball found</span>
+            <h3>Batting practice in slow motion</h3>
+            <p>It followed the pitch in (pink) and the ball back out after the hit (yellow), through a blurry net in front of the camera.</p>
+            <p>The speed is rough here because this camera faced the ball's flight instead of looking across it.</p>
+            <div class="links"><a class="more" href="https://www.youtube.com/watch?v=A5mFi-aVQJ0&amp;t=4s" target="_blank" rel="noopener">Watch the original →</a></div>
+          </div>
+        </article>
+        <article class="example">
+          <img src="media/real-lob.jpg" alt="A ball tossed through the air, circled in every one of 52 pictures" loading="lazy" width="587" height="409">
+          <div class="body">
+            <span class="pill good">Ball found</span>
+            <h3>A ball in the air, 52 pictures in a row</h3>
+            <p>A ball tossed back to the pitcher, found and circled in every single picture. Each circle is one picture.</p>
+            <div class="links"><a class="more" href="https://www.youtube.com/watch?v=FZ-ghN6XvDQ&amp;t=6s" target="_blank" rel="noopener">Watch the original →</a></div>
+          </div>
+        </article>
+        <article class="example">
+          <img src="media/normal-speed.jpg" alt="Two pictures in a row from a normal-speed video: the ball is on the tee, then it is gone" loading="lazy" width="1200" height="421">
+          <div class="body">
+            <span class="pill bad">Refused</span>
+            <h3>Normal-speed video with a radar reading</h3>
+            <p>Two pictures in a row: the ball is on the tee, then it's gone. The radar on the wall reads 87 mph, but the camera never saw the ball fly.</p>
+            <p>The tracker refuses videos like this, and another one with a 99 mph radar reading, instead of guessing.</p>
+            <div class="links">
+              <a class="more" href="https://www.youtube.com/watch?v=7n_0v5E2mFE" target="_blank" rel="noopener">Watch the 87 mph video →</a>
+              <a class="more" href="https://www.youtube.com/watch?v=8LTKNTePAHA" target="_blank" rel="noopener">Watch the 99 mph video →</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="status">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Where we are</p>
+        <h2>What works, and what's next</h2>
+      </div>
+      <div class="status">
+        <div class="state good"><b>Works</b><h3>Finds and follows the ball</h3><p>In real slow-motion videos, including through a net and with the bat swinging past.</p></div>
+        <div class="state good"><b>Works</b><h3>Says no when it can't measure</h3><p>Normal-speed videos and unclear shots are rejected instead of getting a wrong number.</p></div>
+        <div class="state wait"><b>Next</b><h3>Prove the exact speeds</h3><p>Film real swings side-on next to a radar gun and compare. None of the YouTube videos had the right camera angle to check this.</p></div>
+      </div>
+      <div class="fps">
+        <h3>Why slow motion matters</h3>
+        <p style="color:var(--ink-soft);font-size:0.98rem">How many pictures the camera takes of a 90 mph ball crossing a 13 ft wide view:</p>
+        <div class="fpsrow"><b>30 fps</b><div class="dots"><i></i><i></i><i></i></div><em class="no">Too few</em></div>
+        <div class="fpsrow"><b>60 fps</b><div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div><em>Rough</em></div>
+        <div class="fpsrow"><b>120 fps</b><div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><em>Good</em></div>
+        <div class="fpsrow"><b>240 fps</b><div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><em>Best</em></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="guide">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Instructions</p>
+        <h2>Measure your first hit in 10 minutes</h2>
+        <p class="lede">Step by step, with every command ready to copy. It uses the same real videos shown above.</p>
+      </div>
+      <div class="guide">
+        <div class="guidebar">
+          <span>instructions.md</span>
+          <span style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="mini" id="copyall" type="button">Copy the guide</button>
+            <a class="mini" href="instructions.md" download>Download .md</a>
+          </span>
+        </div>
+        <div class="md" id="md"><p>Loading the guide…</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="next" style="border-bottom:0">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Next steps</p>
+        <h2>From prototype to the app</h2>
+      </div>
+      <div class="next">
+        <div><h3>Radar check</h3><p>Film 50–100 real swings next to a radar gun and compare the numbers.</p></div>
+        <div><h3>Guided filming in the app</h3><p>The app turns on slow motion, checks the phone is level and asks for the camera distance before recording.</p></div>
+        <div><h3>Results in the app</h3><p>Upload the clip and get the numbers back on the athlete's session and dashboard.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Lanista · ball tracking prototype · November 2026. Example clips belong to their YouTube creators; the links open the originals.</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+(function () {
+  var md = document.getElementById("md");
+  var raw = "";
+  function select(node) {
+    var r = document.createRange(); r.selectNodeContents(node);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+  function copy(text, btn, node) {
+    var label = btn.textContent;
+    var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = label; }, 1400); };
+    try { navigator.clipboard.writeText(text).then(done, function () { select(node); }); } catch (e) { select(node); }
+  }
+  function addCopy(pre) {
+    var wrap = document.createElement("div");
+    wrap.className = "pre";
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "copy"; b.textContent = "Copy";
+    b.addEventListener("click", function () { copy(pre.innerText.trim(), b, pre); });
+    wrap.appendChild(b);
+  }
+  fetch("instructions.md").then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function (text) {
+    raw = text;
+    if (window.marked) {
+      md.innerHTML = window.marked.parse(text);
+      md.querySelectorAll("pre").forEach(addCopy);
+      md.querySelectorAll("table").forEach(function (t) { var w = document.createElement("div"); w.className = "tablewrap"; t.parentNode.insertBefore(w, t); w.appendChild(t); });
+    } else {
+      var pre = document.createElement("pre"); pre.textContent = text; md.innerHTML = ""; md.appendChild(pre);
+    }
+  }).catch(function () {
+    md.innerHTML = '<p>The guide couldn\'t load. <a href="instructions.md">Open instructions.md</a> instead.</p>';
+  });
+  document.getElementById("copyall").addEventListener("click", function () { if (raw) copy(raw, this, md); });
+})();
+</script>
+</body>
+</html>
