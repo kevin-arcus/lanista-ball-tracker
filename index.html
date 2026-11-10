@@ -103,14 +103,15 @@ section > .wrap { display: grid; gap: 32px; }
 .example.full .body { padding: 0 24px 24px; }
 .example .body { padding: 24px 24px 24px 0; display: grid; gap: 12px; align-content: center; min-width: 0; }
 .example .body p { color: var(--ink-soft); }
-.pill { justify-self: start; font-family: var(--display); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; border: 1.5px solid currentColor; }
+.pill { justify-self: start; font-family: var(--display); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; border: 1.5px solid currentColor; }
 .pill.good { color: var(--good); } .pill.bad { color: var(--bad); }
 .links { display: flex; flex-wrap: wrap; gap: 16px; }
 
 .status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.state { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 8px; align-content: start; border-top: 4px solid var(--c); }
+.state { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 8px; align-content: start; }
 .state.good { --c: var(--good); } .state.wait { --c: var(--wait); }
-.state b { font-family: var(--display); font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
+.state b { font-family: var(--display); font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); display: flex; align-items: center; gap: 8px; }
+.state b::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 .state p { color: var(--ink-soft); font-size: 1rem; }
 .fps { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
 .fps h3 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -131,11 +132,11 @@ section > .wrap { display: grid; gap: 32px; }
 .md p, .md ul, .md ol { margin: 0 0 14px; }
 .md li { margin-bottom: 6px; }
 .md hr { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
-.md code { background: color-mix(in srgb, var(--line) 60%, transparent); padding: 1px 6px; border-radius: 4px; }
+.md code { background: color-mix(in srgb, var(--line) 60%, transparent); padding: 2px 8px; border-radius: 4px; }
 .md .pre { position: relative; margin: 0 0 16px; }
 .md pre { background: var(--code); color: #f1f0e8; padding: 14px 84px 14px 16px; border-radius: 10px; overflow-x: auto; margin: 0; }
 .md pre code { background: none; padding: 0; color: inherit; font-size: 0.9rem; }
-.md .copy { position: absolute; top: 8px; right: 8px; font-family: var(--display); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; background: var(--yellow); color: #121210; border: 0; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.md .copy { position: absolute; top: 8px; right: 8px; font-family: var(--display); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; text-transform: uppercase; background: var(--yellow); color: #121210; border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
 .md table { border-collapse: collapse; width: 100%; margin: 0 0 16px; font-size: 0.97rem; }
 .md th, .md td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .md th { font-family: var(--display); letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.85rem; color: var(--ink-soft); }
